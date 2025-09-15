@@ -35,6 +35,8 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
     gender: 'any'
   });
 
+  // --- FIX APPLIED HERE ---
+  // Simplified the type signature for 'e'
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -73,36 +75,38 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
           />
         </div>
 
-        {/* Location Field */}
-        <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Preferred Location
-          </label>
-          {locations.length > 0 ? (
-            <select
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="">Any location</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g., New York, London, Remote"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
-          )}
-        </div>
+        {/* The location input is now conditionally rendered based on the workMode value */}
+        {formData.workMode !== 'remote' && (
+          <div>
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Preferred Location
+            </label>
+            {locations.length > 0 ? (
+              <select
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="">Any location</option>
+                {locations.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                placeholder="e.g., New Delhi, Remote"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              />
+            )}
+          </div>
+        )}
 
         {/* Work Mode */}
         <div>
