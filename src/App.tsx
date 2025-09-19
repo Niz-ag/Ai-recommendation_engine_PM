@@ -5,6 +5,9 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { LandingPage } from './components/LandingPage';
 import { RecommendationForm } from './components/RecommendationForm';
 import { RecommendationResults } from './components/RecommendationResults';
+import { AdminPanel } from './components/AdminPanel';
+import { TrendingInternships } from './components/TrendingInternships';
+import { UserStats } from './components/UserStats';
 
 interface UserFormData {
   age: string;
@@ -13,12 +16,14 @@ interface UserFormData {
   location: string;
   workMode: string;
   duration: string;
+  gender?: string;
+  paymentPreference?: string;
 }
 
 interface Recommendation {
   id: string;
+  title: string;
   company: string;
-  position: string;
   location: string;
   workMode: string;
   duration: string;
@@ -27,35 +32,42 @@ interface Recommendation {
   description: string;
   requirements: string[];
   benefits: string[];
+  skillsMatch: number;
+  locationMatch: number;
+  collaborativeScore: number;
+  isPaid: boolean;
 }
 
 interface ApiStats {
   total_internships: number;
   unique_companies: number;
   unique_locations: number;
-  work_modes: Record<string, number>;
-  paid_vs_unpaid: {
-    paid: number;
-    unpaid: number;
-  };
+  paid_internships: number;
+  remote_internships: number;
 }
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:5000`;
 
-// Landing Page wrapper
+const getUserId = () => {
+  let userId = localStorage.getItem('internship_user_id');
+  if (!userId) {
+    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('internship_user_id', userId);
+  }
+  return userId;
+};
+
 const LandingWrapper = () => {
   const navigate = useNavigate();
   const [apiStatus, setApiStatus] = useState<'loading' | 'connected' | 'error'>('loading');
   const [stats, setStats] = useState<ApiStats | null>(null);
 
   useEffect(() => {
-    // Check API status and get stats
     const checkApiStatus = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/`);
         if (response.ok) {
           setApiStatus('connected');
-          // Get stats
           const statsResponse = await fetch(`${API_BASE_URL}/stats`);
           if (statsResponse.ok) {
             const statsData = await statsResponse.json();
@@ -69,7 +81,6 @@ const LandingWrapper = () => {
         setApiStatus('error');
       }
     };
-
     checkApiStatus();
   }, []);
 
@@ -84,15 +95,13 @@ const LandingWrapper = () => {
   return (
     <div className="min-h-screen">
       <LandingPage onGetStarted={handleGetStarted} />
-      
-      {/* API Status Indicator */}
       <div className="fixed bottom-4 right-4 z-50">
-        <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
-          apiStatus === 'loading' ? 'bg-yellow-100 text-yellow-800' :
+        <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+          apiStatus === 'loading' ? 'bg-yellow-100 text-yellow-800 animate-pulse' :
           apiStatus === 'connected' ? 'bg-green-100 text-green-800' :
           'bg-red-100 text-red-800'
         }`}>
-          {apiStatus === 'loading' && 'Initializing...'}
+          {apiStatus === 'loading' && 'Initializing AI Engine...'}
           {apiStatus === 'connected' && `Ready (${stats?.total_internships || 0} internships)`}
           {apiStatus === 'error' && 'Connection Error'}
         </div>
@@ -101,18 +110,19 @@ const LandingWrapper = () => {
   );
 };
 
-// Form + Results wrapper
 const FormResultsWrapper = () => {
+  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<string[]>([]);
+  const [userId] = useState(getUserId());
+  const [showUserStats, setShowUserStats] = useState(false);
+  const [lastSearchCriteria, setLastSearchCriteria] = useState<UserFormData | null>(null);
 
-  // Load departments and locations on component mount
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        // Load locations
         const locResponse = await fetch(`${API_BASE_URL}/locations`);
         if (locResponse.ok) {
           const locData = await locResponse.json();
@@ -122,24 +132,20 @@ const FormResultsWrapper = () => {
         console.error('Error loading form options:', error);
       }
     };
-
     loadOptions();
   }, []);
 
   const handleFormSubmit = async (formData: UserFormData) => {
     setIsLoading(true);
     setError(null);
+    setLastSearchCriteria(formData);
 
     try {
-      console.log('Sending form data:', formData);
-      
+      const requestData = { ...formData, userId: userId };
       const response = await fetch(`${API_BASE_URL}/recommend`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
@@ -148,8 +154,6 @@ const FormResultsWrapper = () => {
       }
 
       const data = await response.json();
-      console.log('Received recommendations:', data);
-      
       if (data.recommendations && Array.isArray(data.recommendations)) {
         setRecommendations(data.recommendations);
         if (data.recommendations.length === 0) {
@@ -167,72 +171,71 @@ const FormResultsWrapper = () => {
     }
   };
 
-  const handleRetry = () => {
-    setError(null);
-    setRecommendations([]);
+  const handleFeedback = async (internshipId: string, feedbackType: string, rating?: number) => {
+    try {
+      await fetch(`${API_BASE_URL}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, internshipId, feedbackType, rating, userProfile: lastSearchCriteria })
+      });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
   };
 
   return (
     <div className="min-h-screen py-12 px-4 bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <ThemeToggle />
-      <div className="max-w-4xl mx-auto space-y-8">
-        <RecommendationForm 
-          onSubmit={handleFormSubmit} 
-          isLoading={isLoading}
-          locations={locations}
-        />
-        
-        {isLoading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">
-              Finding the best internships for you...
-            </p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800 dark:text-red-400">
-                  Error occurred
-                </h3>
-                <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-                  {error}
-                </div>
-                <div className="mt-4">
-                  <button
-                    onClick={handleRetry}
-                    className="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400 px-3 py-1 rounded text-sm hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
+
+      <div className="max-w-6xl mx-auto mb-8 flex justify-between items-center">
+        <button onClick={() => navigate('/')} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">← Back to Home</button>
+        <div className="flex gap-4">
+          <button onClick={() => setShowUserStats(!showUserStats)} className="bg-green-500 text-white px-4 py-2 rounded-lg">My Stats</button>
+          <button onClick={() => navigate('/trending')} className="bg-purple-500 text-white px-4 py-2 rounded-lg">Trending</button>
+          <button onClick={() => navigate('/admin')} className="bg-orange-500 text-white px-4 py-2 rounded-lg">Add Internship</button>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto space-y-8">
+        {showUserStats && <UserStats userId={userId} onClose={() => setShowUserStats(false)} />}
+
+        {/* Always render the form to avoid remounting */}
+        <RecommendationForm onSubmit={handleFormSubmit} isLoading={isLoading} locations={locations} />
+
+        {isLoading && <p className="text-center">AI is analyzing internships...</p>}
+
+        {error && <div className="bg-red-50 p-4 rounded">{error}</div>}
+
         {!isLoading && !error && recommendations.length > 0 && (
-          <>
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Found {recommendations.length} Great Matches!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Here are the internships that best match your preferences
-              </p>
-            </div>
-            <RecommendationResults recommendations={recommendations} />
-          </>
+          <RecommendationResults recommendations={recommendations} onFeedback={handleFeedback} />
         )}
       </div>
+    </div>
+  );
+};
+
+const TrendingWrapper = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen py-12 px-4 bg-gradient-to-br from-purple-50 via-pink-50 to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <ThemeToggle />
+      <div className="max-w-6xl mx-auto mb-8 flex justify-between items-center">
+        <button onClick={() => navigate('/form')} className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium">← Back to Search</button>
+      </div>
+      <TrendingInternships />
+    </div>
+  );
+};
+
+const AdminWrapper = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen py-12 px-4 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <ThemeToggle />
+      <div className="max-w-4xl mx-auto mb-8 flex justify-between items-center">
+        <button onClick={() => navigate('/form')} className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 font-medium">← Back to Search</button>
+      </div>
+      <AdminPanel />
     </div>
   );
 };
@@ -244,6 +247,8 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingWrapper />} />
           <Route path="/form" element={<FormResultsWrapper />} />
+          <Route path="/trending" element={<TrendingWrapper />} />
+          <Route path="/admin" element={<AdminWrapper />} />
         </Routes>
       </Router>
     </ThemeProvider>
