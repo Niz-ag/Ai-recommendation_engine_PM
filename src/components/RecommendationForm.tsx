@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { User, MapPin, Briefcase, DollarSign } from 'lucide-react';
 
 interface UserFormData {
@@ -18,7 +18,7 @@ interface RecommendationFormProps {
   locations?: string[];
 }
 
-export const RecommendationForm: React.FC<RecommendationFormProps> = ({
+export const RecommendationForm: React.FC<RecommendationFormProps> = React.memo(({
   onSubmit,
   isLoading,
   locations = []
@@ -36,7 +36,8 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (
+  // Memoize the change handler to prevent re-renders
+  const handleChange = useCallback((
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
@@ -45,15 +46,16 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
       [name]: value
     }));
 
+    // Clear error for this field if it exists
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
       }));
     }
-  };
+  }, [errors]);
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.skills.trim()) {
@@ -73,16 +75,17 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
       onSubmit(formData);
     }
-  };
+  }, [formData, validateForm, onSubmit]);
 
-  const FormSection = ({
+  // Memoize components to prevent unnecessary re-renders
+  const FormSection = useMemo(() => React.memo(({
     icon: Icon,
     title,
     children
@@ -100,9 +103,9 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
       </div>
       {children}
     </div>
-  );
+  )), []);
 
-  const InputField = ({
+  const InputField = useMemo(() => React.memo(({
     label,
     name,
     type = 'text',
@@ -138,7 +141,7 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
         </p>
       )}
     </div>
-  );
+  )), []);
 
   return (
     <form className="max-w-4xl mx-auto" onSubmit={handleSubmit}>
@@ -386,4 +389,6 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = ({
       </div>
     </form>
   );
-};
+});
+
+RecommendationForm.displayName = 'RecommendationForm';

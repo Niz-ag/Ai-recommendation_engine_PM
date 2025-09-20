@@ -149,7 +149,7 @@ export const TrendingInternships: React.FC = () => {
             const trendingData = getTrendingLevel(
               internship.recent_interactions
             );
-            const TrendIcon = trendingData.icon;
+            
             const style = badgeStyles[trendingData.style];
 
             return (
@@ -184,7 +184,7 @@ export const TrendingInternships: React.FC = () => {
                     <div
                       className={`flex items-center gap-1 px-3 py-1 rounded-full ${style.bg}`}
                     >
-                      <TrendIcon className={`w-4 h-4 ${style.icon}`} />
+                      
                       <span
                         className={`text-sm font-semibold ${style.text}`}
                       >

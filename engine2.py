@@ -94,7 +94,7 @@ class FeedbackManager:
             )
         ''')
         
-        # Feedback table
+        # Feedback table with unique constraint
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS feedback (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,7 +103,8 @@ class FeedbackManager:
                 feedback_type TEXT,  -- 'upvote', 'downvote', 'apply', 'skip'
                 rating INTEGER,      -- 1-5 scale (optional)
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
+                FOREIGN KEY (user_id) REFERENCES users (user_id),
+                UNIQUE(user_id, internship_id, feedback_type)
             )
         ''')
         
@@ -147,21 +148,49 @@ class FeedbackManager:
         conn.close()
     
     def add_feedback(self, user_id: str, internship_id: str, feedback_type: str, rating: Optional[int] = None):
-        """Add user feedback for an internship."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Add feedback
-        cursor.execute('''
-            INSERT INTO feedback (user_id, internship_id, feedback_type, rating)
-            VALUES (?, ?, ?, ?)
-        ''', (user_id, internship_id, feedback_type, rating))
-        
-        # Update internship stats
-        self._update_internship_stats(cursor, internship_id)
-        
-        conn.commit()
-        conn.close()
+   
+     conn = sqlite3.connect(self.db_path)
+     cursor = conn.cursor()
+     try:
+         conn.execute("BEGIN")
+    
+         # Map mutually-exclusive types (only these pairs are auto-removed)
+         opposites = {'upvote': 'downvote', 'downvote': 'upvote'}
+    
+         # If user is adding a like/dislike, remove the opposite first
+         if feedback_type in opposites:
+             cursor.execute(
+                 "DELETE FROM feedback WHERE user_id=? AND internship_id=? AND feedback_type=?",
+                 (user_id, internship_id, opposites[feedback_type])
+             )
+    
+         # Check if the same feedback already exists -> toggle it off
+         cursor.execute(
+             "SELECT id FROM feedback WHERE user_id=? AND internship_id=? AND feedback_type=?",
+             (user_id, internship_id, feedback_type)
+         )
+         row = cursor.fetchone()
+         if row:
+             # Already exists -> user clicked again => remove (toggle off)
+             cursor.execute("DELETE FROM feedback WHERE id=?", (row[0],))
+         else:
+             # Insert new feedback
+             cursor.execute(
+                 "INSERT INTO feedback (user_id, internship_id, feedback_type, rating) VALUES (?, ?, ?, ?)",
+                 (user_id, internship_id, feedback_type, rating)
+             )
+    
+         # Update internship stats based on the current content of feedback table
+         self._update_internship_stats(cursor, internship_id)
+    
+         conn.commit()
+     except Exception as e:
+         conn.rollback()
+         logging.exception("Failed to add/toggle feedback")
+         raise
+     finally:
+         conn.close()
+
     
     def _update_internship_stats(self, cursor, internship_id: str):
         """Update internship popularity statistics."""
