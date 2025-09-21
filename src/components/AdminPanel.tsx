@@ -297,18 +297,7 @@ export const AdminPanel: React.FC = React.memo(() => {
             </InputField>
           </div>
 
-          <div className="mt-6">
-            <InputField label="Description" name="description">
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Brief description of the internship role, responsibilities, and what the intern will learn..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all duration-200"
-              />
-            </InputField>
-          </div>
+        
         </FormSection>
 
         {/* Submit Button */}

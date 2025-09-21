@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Building, Clock, Star, ThumbsUp, ThumbsDown, ExternalLink, Zap, Target, Brain, TrendingUp, Award } from 'lucide-react';
+import { MapPin, Building, Clock, Star, ThumbsUp, ThumbsDown, ExternalLink, Zap, Brain, Award } from 'lucide-react';
 
 interface Recommendation {
   id: string;
@@ -29,7 +29,6 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
   onFeedback 
 }) => {
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, string>>({});
-  const [showScoreBreakdown, setShowScoreBreakdown] = useState<Record<string, boolean>>({});
 
   if (recommendations.length === 0) return null;
 
@@ -38,9 +37,6 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
     setFeedbackGiven(prev => ({ ...prev, [id]: type }));
   };
 
-  const toggleScoreBreakdown = (id: string) => {
-    setShowScoreBreakdown(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   return (
     <div className="space-y-6">
@@ -120,52 +116,7 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
             </div>
           </div>
 
-          {/* AI Score Breakdown Toggle */}
-          <div className="mb-6">
-            <button
-              onClick={() => toggleScoreBreakdown(rec.id)}
-              className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold transition-colors"
-            >
-              <Brain className="w-4 h-4" />
-              AI Score Breakdown
-              <svg 
-                className={`w-4 h-4 transform transition-transform ${showScoreBreakdown[rec.id] ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {showScoreBreakdown[rec.id] && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Target className="w-5 h-5 text-blue-500" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Skills Match</p>
-                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{rec.skillsMatch}%</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Location Match</p>
-                      <p className="text-lg font-bold text-green-600 dark:text-green-400">{rec.locationMatch}%</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="w-5 h-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">AI Recommendation</p>
-                      <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{rec.collaborativeScore}%</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          
 
           {/* Requirements and Benefits */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
