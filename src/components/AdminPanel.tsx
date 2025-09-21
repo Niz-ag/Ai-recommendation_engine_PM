@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Plus, CheckCircle, XCircle, Building, MapPin, DollarSign, FileText } from 'lucide-react';
 
 interface InternshipData {
@@ -14,109 +14,20 @@ interface InternshipData {
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:5000`;
 
-export const AdminPanel: React.FC = () => {
-  const [formData, setFormData] = useState<InternshipData>({
-    title: '',
-    company: '',
-    location: '',
-    skills: '',
-    duration: '',
-    stipend: '',
-    description: '',
-    gender: 'any'
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.company.trim()) newErrors.company = 'Company name is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
-    if (!formData.skills.trim()) newErrors.skills = 'Skills are required';
-    if (!formData.duration) newErrors.duration = 'Duration is required';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/internships`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage({ type: 'success', text: result.message || 'Internship added successfully!' });
-        setFormData({
-          title: '',
-          company: '',
-          location: '',
-          skills: '',
-          duration: '',
-          stipend: '',
-          description: '',
-          gender: 'any'
-        });
-      } else {
-        setMessage({ type: 'error', text: result.error || 'Failed to add internship' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
-      console.error('Error adding internship:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const FormSection = ({ icon: Icon, title, children }: { icon: React.ElementType, title: string, children: React.ReactNode }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-          <Icon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-      </div>
-      {children}
-    </div>
-  );
-
-  const InputField = ({ label, name, type = "text", required = false, error, children }: {
+// Memoized Input Field
+const InputField = React.memo(
+  ({
+    label,
+    name,
+    required = false,
+    error,
+    children,
+  }: {
     label: string;
     name: string;
-    type?: string;
     required?: boolean;
     error?: string;
-    children?: React.ReactNode;
+    children: React.ReactNode;
   }) => (
     <div className="space-y-2">
       <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -130,6 +41,107 @@ export const AdminPanel: React.FC = () => {
         </p>
       )}
     </div>
+  )
+);
+
+// Memoized Form Section
+const FormSection = React.memo(
+  ({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+          <Icon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+      </div>
+      {children}
+    </div>
+  )
+);
+
+export const AdminPanel: React.FC = React.memo(() => {
+  const [formData, setFormData] = useState<InternshipData>({
+    title: '',
+    company: '',
+    location: '',
+    skills: '',
+    duration: '',
+    stipend: '',
+    description: '',
+    gender: 'any',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Memoized change handler
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, [name]: value }));
+
+      if (errors[name]) {
+        setErrors(prev => ({ ...prev, [name]: '' }));
+      }
+    },
+    [errors]
+  );
+
+  // Validate form
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.company.trim()) newErrors.company = 'Company name is required';
+    if (!formData.location.trim()) newErrors.location = 'Location is required';
+    if (!formData.skills.trim()) newErrors.skills = 'Skills are required';
+    if (!formData.duration) newErrors.duration = 'Duration is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  // Memoized submit handler
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsSubmitting(true);
+      setMessage(null);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/internships`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          setMessage({ type: 'success', text: result.message || 'Internship added successfully!' });
+          setFormData({
+            title: '',
+            company: '',
+            location: '',
+            skills: '',
+            duration: '',
+            stipend: '',
+            description: '',
+            gender: 'any',
+          });
+        } else {
+          setMessage({ type: 'error', text: result.error || 'Failed to add internship' });
+        }
+      } catch (error) {
+        setMessage({ type: 'error', text: 'Network error. Please try again.' });
+        console.error('Error adding internship:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [formData, validateForm]
   );
 
   return (
@@ -139,9 +151,7 @@ export const AdminPanel: React.FC = () => {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4">
           <Plus className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Add New Internship
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Add New Internship</h1>
         <p className="text-gray-600 dark:text-gray-400 text-lg">
           Contribute to the internship database and help students find opportunities
         </p>
@@ -149,22 +159,26 @@ export const AdminPanel: React.FC = () => {
 
       {/* Success/Error Message */}
       {message && (
-        <div className={`p-4 rounded-xl border ${
-          message.type === 'success' 
-            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
-            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-        }`}>
+        <div
+          className={`p-4 rounded-xl border ${
+            message.type === 'success'
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          }`}
+        >
           <div className="flex items-center gap-3">
             {message.type === 'success' ? (
               <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
             ) : (
               <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
             )}
-            <p className={`font-medium ${
-              message.type === 'success' 
-                ? 'text-green-800 dark:text-green-400' 
-                : 'text-red-800 dark:text-red-400'
-            }`}>
+            <p
+              className={`font-medium ${
+                message.type === 'success'
+                  ? 'text-green-800 dark:text-green-400'
+                  : 'text-red-800 dark:text-red-400'
+              }`}
+            >
               {message.text}
             </p>
           </div>
@@ -179,7 +193,6 @@ export const AdminPanel: React.FC = () => {
             <InputField label="Internship Title" name="title" required error={errors.title}>
               <input
                 type="text"
-                id="title"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
@@ -193,7 +206,6 @@ export const AdminPanel: React.FC = () => {
             <InputField label="Company Name" name="company" required error={errors.company}>
               <input
                 type="text"
-                id="company"
                 name="company"
                 value={formData.company}
                 onChange={handleChange}
@@ -212,7 +224,6 @@ export const AdminPanel: React.FC = () => {
             <InputField label="Location" name="location" required error={errors.location}>
               <input
                 type="text"
-                id="location"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
@@ -225,7 +236,6 @@ export const AdminPanel: React.FC = () => {
 
             <InputField label="Duration" name="duration" required error={errors.duration}>
               <select
-                id="duration"
                 name="duration"
                 value={formData.duration}
                 onChange={handleChange}
@@ -248,12 +258,11 @@ export const AdminPanel: React.FC = () => {
         <FormSection icon={FileText} title="Skills & Requirements">
           <InputField label="Required Skills" name="skills" required error={errors.skills}>
             <textarea
-              id="skills"
               name="skills"
               value={formData.skills}
               onChange={handleChange}
               rows={3}
-              placeholder="e.g., Python, JavaScript, React, Database Management, Communication"
+              placeholder="e.g., Python, JavaScript, React, Database Management"
               className={`w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none transition-all duration-200 ${
                 errors.skills ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
@@ -266,8 +275,6 @@ export const AdminPanel: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField label="Stipend" name="stipend">
               <input
-                type="text"
-                id="stipend"
                 name="stipend"
                 value={formData.stipend}
                 onChange={handleChange}
@@ -278,7 +285,6 @@ export const AdminPanel: React.FC = () => {
 
             <InputField label="Gender Preference" name="gender">
               <select
-                id="gender"
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
@@ -294,7 +300,6 @@ export const AdminPanel: React.FC = () => {
           <div className="mt-6">
             <InputField label="Description" name="description">
               <textarea
-                id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
@@ -314,11 +319,7 @@ export const AdminPanel: React.FC = () => {
             className="group relative px-12 py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold text-lg rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:scale-100 disabled:shadow-none min-w-[200px]"
           >
             {isSubmitting ? (
-              <span className="flex items-center justify-center gap-3">
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              <span className="flex items-center justify-center gap-3 animate-pulse">
                 Adding Internship...
               </span>
             ) : (
@@ -340,4 +341,4 @@ export const AdminPanel: React.FC = () => {
       </div>
     </div>
   );
-};
+});

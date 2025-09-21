@@ -96,11 +96,15 @@ const LandingWrapper = () => {
     <div className="min-h-screen">
       <LandingPage onGetStarted={handleGetStarted} />
       <div className="fixed bottom-4 right-4 z-50">
-        <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-          apiStatus === 'loading' ? 'bg-yellow-100 text-yellow-800 animate-pulse' :
-          apiStatus === 'connected' ? 'bg-green-100 text-green-800' :
-          'bg-red-100 text-red-800'
-        }`}>
+        <div
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+            apiStatus === 'loading'
+              ? 'bg-yellow-100 text-yellow-800 animate-pulse'
+              : apiStatus === 'connected'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
           {apiStatus === 'loading' && 'Initializing AI Engine...'}
           {apiStatus === 'connected' && `Ready (${stats?.total_internships || 0} internships)`}
           {apiStatus === 'error' && 'Connection Error'}
@@ -143,8 +147,8 @@ const FormResultsWrapper = () => {
     try {
       const requestData = { ...formData, userId: userId };
       const response = await fetch(`${API_BASE_URL}/recommend`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(requestData),
       });
 
@@ -163,7 +167,7 @@ const FormResultsWrapper = () => {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error("Error fetching recommendations:", error);
+      console.error('Error fetching recommendations:', error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
       setRecommendations([]);
     } finally {
@@ -176,7 +180,7 @@ const FormResultsWrapper = () => {
       await fetch(`${API_BASE_URL}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, internshipId, feedbackType, rating, userProfile: lastSearchCriteria })
+        body: JSON.stringify({ userId, internshipId, feedbackType, rating, userProfile: lastSearchCriteria }),
       });
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -188,18 +192,25 @@ const FormResultsWrapper = () => {
       <ThemeToggle />
 
       <div className="max-w-6xl mx-auto mb-8 flex justify-between items-center">
-        <button onClick={() => navigate('/')} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">← Back to Home</button>
+        <button onClick={() => navigate('/')} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
+          ← Back to Home
+        </button>
         <div className="flex gap-4">
-          <button onClick={() => setShowUserStats(!showUserStats)} className="bg-green-500 text-white px-4 py-2 rounded-lg">My Stats</button>
-          <button onClick={() => navigate('/trending')} className="bg-purple-500 text-white px-4 py-2 rounded-lg">Trending</button>
-          <button onClick={() => navigate('/admin')} className="bg-orange-500 text-white px-4 py-2 rounded-lg">Add Internship</button>
+          <button onClick={() => setShowUserStats(!showUserStats)} className="bg-green-500 text-white px-4 py-2 rounded-lg">
+            My Stats
+          </button>
+          <button onClick={() => navigate('/trending')} className="bg-purple-500 text-white px-4 py-2 rounded-lg">
+            Trending
+          </button>
+          <button onClick={() => navigate('/admin')} className="bg-orange-500 text-white px-4 py-2 rounded-lg">
+            Add Internship
+          </button>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto space-y-8">
         {showUserStats && <UserStats userId={userId} onClose={() => setShowUserStats(false)} />}
 
-        {/* Always render the form to avoid remounting */}
         <RecommendationForm onSubmit={handleFormSubmit} isLoading={isLoading} locations={locations} />
 
         {isLoading && <p className="text-center">AI is analyzing internships...</p>}
@@ -219,8 +230,13 @@ const TrendingWrapper = () => {
   return (
     <div className="min-h-screen py-12 px-4 bg-gradient-to-br from-purple-50 via-pink-50 to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <ThemeToggle />
-      <div className="max-w-6xl mx-auto mb-8 flex justify-between items-center">
-        <button onClick={() => navigate('/form')} className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium">← Back to Search</button>
+      <div className="max-w-6xl mx-auto mb-8 flex justify-start items-center">
+        <button
+          onClick={() => navigate('/form')}
+          className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium"
+        >
+          ← Back to Search
+        </button>
       </div>
       <TrendingInternships />
     </div>
@@ -232,10 +248,17 @@ const AdminWrapper = () => {
   return (
     <div className="min-h-screen py-12 px-4 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <ThemeToggle />
-      <div className="max-w-4xl mx-auto mb-8 flex justify-between items-center">
-        <button onClick={() => navigate('/form')} className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 font-medium">← Back to Search</button>
+      <div className="max-w-6xl mx-auto mb-8 flex justify-start items-center">
+        <button
+          onClick={() => navigate('/form')}
+          className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 font-medium"
+        >
+          ← Back to Search
+        </button>
       </div>
-      <AdminPanel />
+      <div className="max-w-6xl mx-auto">
+        <AdminPanel />
+      </div>
     </div>
   );
 };
