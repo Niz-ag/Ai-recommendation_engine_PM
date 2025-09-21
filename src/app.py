@@ -355,10 +355,7 @@ def admin_panel():
                     <label for="stipend">Stipend</label>
                     <input type="text" id="stipend" name="stipend" placeholder="e.g., ₹15000/month">
                 </div>
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" placeholder="Brief description of the internship..."></textarea>
-                </div>
+                
                 <div class="form-group">
                     <label for="gender">Gender Preference</label>
                     <select id="gender" name="gender">
