@@ -693,24 +693,26 @@ class OptimizedInternshipRecommender:
         return np.array(exact_scores), semantic_similarities
     
     def calculate_location_similarity(self, user_location: str) -> np.ndarray:
-        """Optimized location similarity calculation."""
+        """Optimized and readable location similarity calculation using np.select."""
         if not user_location or not user_location.strip():
+
             return np.where(self.location_types == 'remote', 0.8, 0.6)
-        
-        user_location_processed = preprocess_text(user_location)
+
         user_location_type = determine_location_type(user_location)
-        
-        scores = np.where(
-            (user_location_type == 'remote') & (self.location_types == 'remote'), 1.0,
-            np.where(
-                (user_location_type == 'onsite') & (self.location_types == 'onsite'), 0.8,
-                np.where(
-                    (user_location_type == 'onsite') & (self.location_types == 'remote'), 0.7,
-                    0.2
-                )
-            )
-        )
-        
+
+        conditions = [
+
+            (user_location_type == 'remote') & (self.location_types == 'remote'),
+
+            (user_location_type == 'onsite') & (self.location_types == 'onsite'),
+ 
+            (user_location_type == 'onsite') & (self.location_types == 'remote')
+        ]
+
+        scores_list = [1.0, 1.0, 0.7]
+
+        scores = np.select(conditions, scores_list, default=0.2)
+
         return scores
     
     def calculate_collaborative_scores(self, user_id: str) -> np.ndarray:
@@ -757,24 +759,16 @@ class OptimizedInternshipRecommender:
                             user_id: str = None,
                             top_n: int = Config.DEFAULT_TOP_N, 
                             min_score: float = Config.MIN_SCORE_THRESHOLD) -> pd.DataFrame:
-        """Enhanced recommendation with collaborative filtering."""
-        self.logger.info("Calculating recommendations with collaborative filtering...")
+        """
+        Enhanced recommendation with adaptive scoring.
+        Switches between hybrid and content-only models based on feedback availability.
+        """
+        self.logger.info("Calculating recommendations with adaptive scoring...")
         
-        # Calculate content-based similarities
+        # --- Stage 1: Calculate all content-based similarities ---
         exact_skills_sim, semantic_skills_sim = self.calculate_skills_similarity(user_skills)
         location_sim = self.calculate_location_similarity(user_location)
         
-        # Calculate collaborative filtering scores
-        if user_id:
-            collaborative_scores = self.calculate_collaborative_scores(user_id)
-        else:
-            # If no user_id provided, use popularity scores only
-            popularity_scores = self.feedback_manager.get_internship_popularity_scores()
-            collaborative_scores = np.array([
-                popularity_scores.get(iid, 0.5) for iid in self.internship_ids
-            ])
-        
-        # Vectorized matching for other factors
         user_gender_processed = normalize_gender_input(user_gender)
         gender_match = np.where(
             (self.processed_genders == 'any') | 
@@ -782,23 +776,45 @@ class OptimizedInternshipRecommender:
             (self.processed_genders == user_gender_processed), 1.0, 0.8
         )
         
-        # Payment matching
         if user_payment_preference.lower() == 'paid':
             payment_match = np.where(self.is_paid_array, 1.0, 0.3)
-        elif user_payment_preference.lower() == 'unpaid':
-            payment_match = np.where(self.is_paid_array, 0.3, 1.0)
         else:
             payment_match = np.ones(len(self.df))
-        
-        # Calculate total scores with collaborative filtering
-        total_scores = (Config.WEIGHTS['skills_exact'] * exact_skills_sim +
-                       Config.WEIGHTS['skills_semantic'] * semantic_skills_sim +
-                       Config.WEIGHTS['location'] * location_sim +
-                       Config.WEIGHTS['collaborative'] * collaborative_scores +
-                       Config.WEIGHTS['gender'] * gender_match +
-                       Config.WEIGHTS['payment'] * payment_match)
-        
-        # Create result efficiently
+
+        # --- Stage 2: Adaptive Scoring Logic ---
+        # Check if the collaborative model is trained and a user is logged in
+        use_collaborative_filtering = self.collaborative_filter.is_trained and user_id is not None
+
+        if use_collaborative_filtering:
+            self.logger.info("Using HYBRID scoring model (Content + Collaborative)")
+            collaborative_scores = self.calculate_collaborative_scores(user_id)
+            
+            # Use original weights that include the collaborative component
+            total_scores = (Config.WEIGHTS['skills_exact'] * exact_skills_sim +
+                           Config.WEIGHTS['skills_semantic'] * semantic_skills_sim +
+                           Config.WEIGHTS['location'] * location_sim +
+                           Config.WEIGHTS['collaborative'] * collaborative_scores)
+        else:
+            self.logger.info("Using CONTENT-ONLY scoring model (No feedback data available)")
+            collaborative_scores = np.zeros(len(self.df)) # Set collaborative score to 0
+            
+            # Re-distribute the collaborative weight among content factors
+            content_weight_total = (Config.WEIGHTS['skills_exact'] + 
+                                    Config.WEIGHTS['skills_semantic'] + 
+                                    Config.WEIGHTS['location'])
+            
+            # New weights scaled to sum to 1.0
+            weight_rescale_factor = 1.0 / content_weight_total # Should be 1.0 / 0.75
+            
+            w_skills_exact_rescaled = Config.WEIGHTS['skills_exact'] * weight_rescale_factor
+            w_skills_semantic_rescaled = Config.WEIGHTS['skills_semantic'] * weight_rescale_factor
+            w_location_rescaled = Config.WEIGHTS['location'] * weight_rescale_factor
+            
+            total_scores = (w_skills_exact_rescaled * exact_skills_sim +
+                           w_skills_semantic_rescaled * semantic_skills_sim +
+                           w_location_rescaled * location_sim)
+
+        # --- Stage 3: Create result and return ---
         result_df = self.df.copy()
         result_df['match_score'] = total_scores
         result_df['skills_exact_similarity'] = exact_skills_sim
@@ -809,12 +825,11 @@ class OptimizedInternshipRecommender:
             result_df['display_location'] == 'Work From Home', 'remote', 'onsite'
         )
         
-        # Filter and sort efficiently
         mask = total_scores >= min_score
         filtered_df = result_df[mask]
         recommendations = filtered_df.nlargest(top_n, 'match_score')
         
-        self.logger.info(f"Found {len(recommendations)} recommendations using collaborative filtering")
+        self.logger.info(f"Found {len(recommendations)} recommendations.")
         return recommendations
     
     def get_user_statistics(self, user_id: str) -> Dict:
