@@ -65,7 +65,7 @@ def format_recommendation(row, index):
     requirements = []
     if skills_val and not pd.isna(skills_val):
         skill_list = [skill.strip() for skill in str(skills_val).split(",") if skill.strip()]
-        requirements = skill_list[:4]  # Take first 4 skills
+        requirements = skill_list 
     
     if not requirements:
         requirements = ["Basic computer skills", "Communication skills", "Enthusiasm to learn"]
@@ -94,7 +94,6 @@ def format_recommendation(row, index):
         "collaborativeScore": round(row.get("collaborative_score", 0) * 100, 1),
         "isPaid": row.get("is_paid", False)
     }
-
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
@@ -103,13 +102,14 @@ def home():
         "recommender_loaded": recommender is not None,
         "features": [
             "Collaborative Filtering",
-            "Skills Matching",
+            "Skills Matching", 
             "Location Preferences", 
             "User Feedback Learning",
             "Trending Internships"
         ]
     })
 
+# --- Replace the /recommend function in app.py with this ---
 @app.route("/recommend", methods=["POST"])
 def recommend():
     global recommender
@@ -123,21 +123,23 @@ def recommend():
         # Extract parameters
         location = data.get("location", "")
         skills = data.get("skills", "")
-        gender = data.get("gender", "any")
         work_mode = data.get("workMode", "remote")
         payment_preference = data.get("paymentPreference", "any")
         user_id = data.get("userId", None)
+        top_n = data.get("topN", 25)
         
-        print(f"Parameters: location={location}, skills={skills}, gender={gender}, work_mode={work_mode}")
+        print(f"Parameters: location={location}, skills={skills}, work_mode={work_mode}, top_n={top_n}")
 
         # Get recommendations using enhanced engine
+        # MODIFIED: Pass work_mode and enforce min_score
         recommendations_df = recommender.recommend_internships(
             user_location=location,
             user_skills=skills,
-            user_gender=gender,
             user_payment_preference=payment_preference,
             user_id=user_id,
-            top_n=20
+            top_n=top_n,
+            user_work_mode=work_mode, # Pass work_mode for new location logic
+            min_score=0.55 # Enforce 55% minimum match score
         )
 
         recommendations = [
@@ -152,8 +154,7 @@ def recommend():
             "search_criteria": {
                 "skills": skills,
                 "location": location,
-                "work_mode": work_mode,
-                "gender": gender
+                "work_mode": work_mode
             }
         })
 
@@ -269,8 +270,6 @@ def add_internship():
             'Skills': data.get('skills'),
             'duration': data.get('duration'),
             'stipend': data.get('stipend', 'Not specified'),
-            'gender': data.get('gender', 'any'),
-
         }
         
         # Add to dataframe
@@ -351,15 +350,6 @@ def admin_panel():
                 <div class="form-group">
                     <label for="stipend">Stipend</label>
                     <input type="text" id="stipend" name="stipend" placeholder="e.g., ₹15000/month">
-                </div>
-                
-                <div class="form-group">
-                    <label for="gender">Gender Preference</label>
-                    <select id="gender" name="gender">
-                        <option value="any">Any</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                    </select>
                 </div>
                 <button type="submit">Add Internship</button>
             </form>

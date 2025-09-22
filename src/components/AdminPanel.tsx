@@ -9,7 +9,6 @@ interface InternshipData {
   duration: string;
   stipend: string;
   description: string;
-  gender: string;
 }
 
 const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -68,7 +67,6 @@ export const AdminPanel: React.FC = React.memo(() => {
     duration: '',
     stipend: '',
     description: '',
-    gender: 'any',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +127,6 @@ export const AdminPanel: React.FC = React.memo(() => {
             duration: '',
             stipend: '',
             description: '',
-            gender: 'any',
           });
         } else {
           setMessage({ type: 'error', text: result.error || 'Failed to add internship' });
@@ -272,8 +269,7 @@ export const AdminPanel: React.FC = React.memo(() => {
 
         {/* Additional Details */}
         <FormSection icon={DollarSign} title="Additional Details">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Stipend" name="stipend">
+          <InputField label="Stipend" name="stipend">
               <input
                 name="stipend"
                 value={formData.stipend}
@@ -281,23 +277,7 @@ export const AdminPanel: React.FC = React.memo(() => {
                 placeholder="e.g., ₹15000/month, Unpaid, Performance based"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
               />
-            </InputField>
-
-            <InputField label="Gender Preference" name="gender">
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200"
-              >
-                <option value="any">Any</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </InputField>
-          </div>
-
-        
+          </InputField>
         </FormSection>
 
         {/* Submit Button */}

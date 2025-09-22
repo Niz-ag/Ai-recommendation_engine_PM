@@ -126,7 +126,7 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
                 Key Requirements
               </h4>
               <div className="flex flex-wrap gap-2">
-                {rec.requirements.slice(0, 4).map((req, idx) => (
+                {rec.requirements.map((req, idx) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium"

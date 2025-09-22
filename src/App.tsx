@@ -9,15 +9,15 @@ import { AdminPanel } from './components/AdminPanel';
 import { TrendingInternships } from './components/TrendingInternships';
 import { UserStats } from './components/UserStats';
 
+// This interface is now corrected
 interface UserFormData {
   age: string;
   familyIncome: string;
   skills: string;
   location: string;
   workMode: string;
-  duration: string;
-  gender?: string;
   paymentPreference?: string;
+  topN: number;
 }
 
 interface Recommendation {
@@ -161,7 +161,8 @@ const FormResultsWrapper = () => {
       if (data.recommendations && Array.isArray(data.recommendations)) {
         setRecommendations(data.recommendations);
         if (data.recommendations.length === 0) {
-          setError('No matching internships found. Try adjusting your criteria.');
+          // MODIFIED: More specific error message
+          setError('No internships found with at least a 55% match for your skills and location. Please try adjusting your search criteria.');
         }
       } else {
         throw new Error('Invalid response format');
@@ -215,7 +216,7 @@ const FormResultsWrapper = () => {
 
         {isLoading && <p className="text-center">AI is analyzing internships...</p>}
 
-        {error && <div className="bg-red-50 p-4 rounded">{error}</div>}
+        {error && <div className="text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 p-4 rounded-xl text-center font-medium">{error}</div>}
 
         {!isLoading && !error && recommendations.length > 0 && (
           <RecommendationResults recommendations={recommendations} onFeedback={handleFeedback} />

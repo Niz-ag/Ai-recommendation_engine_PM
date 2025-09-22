@@ -59,14 +59,13 @@ class Config:
         'gcp': ['gcp', 'google cloud', 'google cloud platform']
     }
     
-    # Scoring weights (adjusted to include collaborative filtering)
+    # Scoring weights
     WEIGHTS = {
-        'skills_exact': 0.35,        # Reduced to make room for CF
-        'skills_semantic': 0.15,     # Reduced to make room for CF
-        'location': 0.25,            # Reduced to make room for CF
-        'collaborative': 0.20,       # New collaborative filtering weight
-        'popularity': 0.05,          # Basic popularity score
-        'gender': 0.0,
+        'skills_exact': 0.3,      
+        'skills_semantic': 0.15,   
+        'location': 0.35,
+        'collaborative': 0.20,
+        'popularity': 0.05,
         'payment': 0.0
     }
 
@@ -407,20 +406,8 @@ class CollaborativeFilter:
         return scores
 
 # ----------------------------
-# Utility Functions (same as before)
+# Utility Functions
 # ----------------------------
-@lru_cache(maxsize=1024)
-def normalize_gender_input(gender_input: Optional[str]) -> str:
-    """Normalize gender input with caching."""
-    if not gender_input:
-        return 'any'
-    gender_str = str(gender_input).lower().strip()
-    if gender_str in ['male', 'm', 'boy', 'men']:
-        return 'male'
-    elif gender_str in ['female', 'f', 'girl', 'women', 'w']:
-        return 'female'
-    return 'any'
-
 @lru_cache(maxsize=2048)
 def preprocess_text(text: Optional[str]) -> str:
     """Optimized text preprocessing with caching."""
@@ -485,7 +472,7 @@ def determine_location_type(location: Optional[str]) -> str:
     return 'remote' if any(keyword in location_str for keyword in remote_keywords) else 'onsite'
 
 # ----------------------------
-# Data Processing (FIXED: Use correct column names)
+# Data Processing
 # ----------------------------
 class DataProcessor:
     """Separate class for data processing operations."""
@@ -503,7 +490,7 @@ class DataProcessor:
         title_col = next((col for col in ['internship_title', 'title'] if col in df.columns), None)
         df['processed_title'] = df[title_col].apply(preprocess_text) if title_col else ''
         
-        # FIXED: Process skills with correct column priority - use 'Skills' first
+        # Process skills
         skills_column = next((col for col in ['Skills', 'skills'] if col in df.columns), None)
         if skills_column:
             df['processed_skills'] = df[skills_column].apply(preprocess_text)
@@ -525,14 +512,13 @@ class DataProcessor:
             df['location_type'] = 'remote'
             df['display_location'] = 'Work From Home'
         
-        # Process gender and payment
-        df['processed_gender'] = df.get('gender', 'any').apply(normalize_gender_input)
+        # Process payment
         df['is_paid'] = df.get('stipend', 0).apply(is_paid)
         
         return df
 
 # ----------------------------
-# Embedding Manager (same as before)
+# Embedding Manager
 # ----------------------------
 class EmbeddingManager:
     """Separate class for embedding management."""
@@ -615,7 +601,6 @@ class OptimizedInternshipRecommender:
         
         # Pre-compute arrays for faster access
         self.location_types = self.df['location_type'].values
-        self.processed_genders = self.df['processed_gender'].values
         self.is_paid_array = self.df['is_paid'].values
         self.internship_ids = self.df['internship_id'].values
         
@@ -654,8 +639,6 @@ class OptimizedInternshipRecommender:
         
         self.feedback_manager.add_feedback(user_id, internship_id, feedback_type, rating)
         
-        # Retrain model periodically (you might want to implement more sophisticated logic)
-        # For now, we'll retrain every time (in production, you'd want to batch this)
         self.collaborative_filter.train_model()
     
     def calculate_skills_similarity(self, user_skills: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -691,27 +674,46 @@ class OptimizedInternshipRecommender:
         )[0]
         
         return np.array(exact_scores), semantic_similarities
-    
-    def calculate_location_similarity(self, user_location: str) -> np.ndarray:
-        """Optimized and readable location similarity calculation using np.select."""
-        if not user_location or not user_location.strip():
+    def calculate_location_similarity(self, user_location: str, user_work_mode: str) -> np.ndarray:
+        """
+        Enhanced location similarity that handles onsite string matching and hybrid preference.
+        """
+        if not user_location and user_work_mode == 'remote':
+            # If no location is given and user wants remote, favor remote jobs
+            return np.where(self.df['location_type'] == 'remote', 1.0, 0.3)
 
-            return np.where(self.location_types == 'remote', 0.8, 0.6)
+        user_location_processed = preprocess_text(user_location)
 
-        user_location_type = determine_location_type(user_location)
-
+        # Define conditions for np.select
         conditions = [
+            # 1. User wants REMOTE: Perfect match if job is remote.
+            (user_work_mode == 'remote'),
 
-            (user_location_type == 'remote') & (self.location_types == 'remote'),
+            # 2. User wants ONSITE: High score if job is onsite AND location string matches.
+            (user_work_mode == 'onsite'),
 
-            (user_location_type == 'onsite') & (self.location_types == 'onsite'),
- 
-            (user_location_type == 'onsite') & (self.location_types == 'remote')
+            # 3. User wants HYBRID: High score for BOTH remote and onsite jobs.
+            (user_work_mode == 'hybrid')
         ]
 
-        scores_list = [1.0, 1.0, 0.7]
+        # Define corresponding score calculations for each condition
+        choices = [
+            # Score for REMOTE: 1.0 if remote, 0.2 otherwise.
+            np.where(self.df['location_type'] == 'remote', 1.0, 0.2),
 
-        scores = np.select(conditions, scores_list, default=0.2)
+            # Score for ONSITE: 1.0 if onsite AND user's location is in the job's location string.
+            np.where(
+                (self.df['location_type'] == 'onsite') & 
+                (self.df['processed_location'].str.contains(user_location_processed, na=False)),
+                1.0, 0.1
+            ),
+
+            # Score for HYBRID: 0.9 for all jobs (both remote and onsite are good fits).
+            np.full(len(self.df), 0.9)
+        ]
+
+        # Default score if no condition is met (should not happen with remote/onsite/hybrid options)
+        scores = np.select(conditions, choices, default=0.1)
 
         return scores
     
@@ -751,13 +753,15 @@ class OptimizedInternshipRecommender:
         
         return np.array(combined_scores)
     
+# --- Replace the recommend_internships function in engine2.py with this ---
+
     def recommend_internships(self, 
                             user_location: str = "", 
                             user_skills: str = "", 
-                            user_gender: str = "any",
                             user_payment_preference: str = "any", 
                             user_id: str = None,
-                            top_n: int = Config.DEFAULT_TOP_N, 
+                            top_n: int = Config.DEFAULT_TOP_N,
+                            user_work_mode: str = 'remote', 
                             min_score: float = Config.MIN_SCORE_THRESHOLD) -> pd.DataFrame:
         """
         Enhanced recommendation with adaptive scoring.
@@ -767,44 +771,35 @@ class OptimizedInternshipRecommender:
         
         # --- Stage 1: Calculate all content-based similarities ---
         exact_skills_sim, semantic_skills_sim = self.calculate_skills_similarity(user_skills)
-        location_sim = self.calculate_location_similarity(user_location)
         
-        user_gender_processed = normalize_gender_input(user_gender)
-        gender_match = np.where(
-            (self.processed_genders == 'any') | 
-            (user_gender_processed == 'any') | 
-            (self.processed_genders == user_gender_processed), 1.0, 0.8
-        )
+        # MODIFIED: Pass the missing 'user_work_mode' argument here
+        location_sim = self.calculate_location_similarity(user_location, user_work_mode)
         
         if user_payment_preference.lower() == 'paid':
             payment_match = np.where(self.is_paid_array, 1.0, 0.3)
         else:
             payment_match = np.ones(len(self.df))
-
+    
         # --- Stage 2: Adaptive Scoring Logic ---
-        # Check if the collaborative model is trained and a user is logged in
         use_collaborative_filtering = self.collaborative_filter.is_trained and user_id is not None
-
+    
         if use_collaborative_filtering:
             self.logger.info("Using HYBRID scoring model (Content + Collaborative)")
             collaborative_scores = self.calculate_collaborative_scores(user_id)
             
-            # Use original weights that include the collaborative component
             total_scores = (Config.WEIGHTS['skills_exact'] * exact_skills_sim +
                            Config.WEIGHTS['skills_semantic'] * semantic_skills_sim +
                            Config.WEIGHTS['location'] * location_sim +
                            Config.WEIGHTS['collaborative'] * collaborative_scores)
         else:
             self.logger.info("Using CONTENT-ONLY scoring model (No feedback data available)")
-            collaborative_scores = np.zeros(len(self.df)) # Set collaborative score to 0
+            collaborative_scores = np.zeros(len(self.df))
             
-            # Re-distribute the collaborative weight among content factors
             content_weight_total = (Config.WEIGHTS['skills_exact'] + 
                                     Config.WEIGHTS['skills_semantic'] + 
                                     Config.WEIGHTS['location'])
             
-            # New weights scaled to sum to 1.0
-            weight_rescale_factor = 1.0 / content_weight_total # Should be 1.0 / 0.75
+            weight_rescale_factor = 1.0 / content_weight_total
             
             w_skills_exact_rescaled = Config.WEIGHTS['skills_exact'] * weight_rescale_factor
             w_skills_semantic_rescaled = Config.WEIGHTS['skills_semantic'] * weight_rescale_factor
@@ -813,7 +808,7 @@ class OptimizedInternshipRecommender:
             total_scores = (w_skills_exact_rescaled * exact_skills_sim +
                            w_skills_semantic_rescaled * semantic_skills_sim +
                            w_location_rescaled * location_sim)
-
+    
         # --- Stage 3: Create result and return ---
         result_df = self.df.copy()
         result_df['match_score'] = total_scores
@@ -1018,14 +1013,12 @@ def main():
     # Get user preferences
     location = input("Enter preferred location (or leave empty for any): ").strip()
     skills = input("Enter your skills (comma separated): ").strip()
-    gender = input("Enter gender preference (male/female/any): ").strip()
     payment_preference = input("Enter payment preference (paid/unpaid/any): ").strip()
     
     # Create user profile
     user_profile = {
         'skills': skills,
         'location': location,
-        'gender': gender,
         'payment_preference': payment_preference,
         'timestamp': datetime.now().isoformat()
     }
@@ -1035,7 +1028,6 @@ def main():
         recommendations = recommender.recommend_internships(
             user_location=location,
             user_skills=skills,
-            user_gender=gender,
             user_payment_preference=payment_preference,
             user_id=user_id,
             top_n=50
