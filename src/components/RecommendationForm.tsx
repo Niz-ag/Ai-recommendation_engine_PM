@@ -100,8 +100,9 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = React.memo(
       newErrors.skills = 'Please enter your skills';
     }
 
-    if (formData.workMode !== 'remote' && !formData.location.trim()) {
-      newErrors.location = 'Location is required for onsite/hybrid work';
+    // MODIFIED: Only require location if workMode is 'onsite'
+    if (formData.workMode === 'onsite' && !formData.location.trim()) {
+      newErrors.location = 'Location is required for onsite work.';
     }
 
     if (formData.age) {
@@ -159,22 +160,23 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = React.memo(
 
         {/* Location & Work Preferences */}
         <FormSection icon={MapPin} title="Work Preferences">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
             <InputField label="Work Mode" name="workMode">
               <select
                 id="workMode"
                 name="workMode"
                 value={formData.workMode}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-2 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="remote">Remote</option>
                 <option value="onsite">Onsite</option>
                 <option value="hybrid">Hybrid</option>
               </select>
             </InputField>
-
-            {formData.workMode !== 'remote' && (
+            
+            {/* MODIFIED: This block now only shows if workMode is 'onsite' */}
+            {formData.workMode === 'onsite' && (
               <InputField label="Preferred Location" name="location" required error={errors.location}>
                 {locations.length > 0 ? (
                   <select

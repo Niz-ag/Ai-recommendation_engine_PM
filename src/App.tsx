@@ -197,13 +197,13 @@ const FormResultsWrapper = () => {
           ← Back to Home
         </button>
         <div className="flex gap-4">
-          <button onClick={() => setShowUserStats(!showUserStats)} className="bg-green-500 text-white px-4 py-2 rounded-lg">
+          <button onClick={() => setShowUserStats(!showUserStats)} className="bg-green-500 text-white px-2 py-1 rounded-lg">
             My Stats
           </button>
-          <button onClick={() => navigate('/trending')} className="bg-purple-500 text-white px-4 py-2 rounded-lg">
+          <button onClick={() => navigate('/trending')} className="bg-purple-500 text-white px-2 py-1 rounded-lg">
             Trending
           </button>
-          <button onClick={() => navigate('/admin')} className="bg-orange-500 text-white px-4 py-2 rounded-lg">
+          <button onClick={() => navigate('/admin')} className="bg-orange-500 text-white px-2 py-1 rounded-lg">
             Add Internship
           </button>
         </div>
