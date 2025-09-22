@@ -148,49 +148,28 @@ class FeedbackManager:
         conn.close()
     
     def add_feedback(self, user_id: str, internship_id: str, feedback_type: str, rating: Optional[int] = None):
-   
-     conn = sqlite3.connect(self.db_path)
-     cursor = conn.cursor()
-     try:
-         conn.execute("BEGIN")
-    
-         # Map mutually-exclusive types (only these pairs are auto-removed)
-         opposites = {'upvote': 'downvote', 'downvote': 'upvote'}
-    
-         # If user is adding a like/dislike, remove the opposite first
-         if feedback_type in opposites:
-             cursor.execute(
-                 "DELETE FROM feedback WHERE user_id=? AND internship_id=? AND feedback_type=?",
-                 (user_id, internship_id, opposites[feedback_type])
-             )
-    
-         # Check if the same feedback already exists -> toggle it off
-         cursor.execute(
-             "SELECT id FROM feedback WHERE user_id=? AND internship_id=? AND feedback_type=?",
-             (user_id, internship_id, feedback_type)
-         )
-         row = cursor.fetchone()
-         if row:
-             # Already exists -> user clicked again => remove (toggle off)
-             cursor.execute("DELETE FROM feedback WHERE id=?", (row[0],))
-         else:
-             # Insert new feedback
-             cursor.execute(
-                 "INSERT INTO feedback (user_id, internship_id, feedback_type, rating) VALUES (?, ?, ?, ?)",
-                 (user_id, internship_id, feedback_type, rating)
-             )
-    
-         # Update internship stats based on the current content of feedback table
-         self._update_internship_stats(cursor, internship_id)
-    
-         conn.commit()
-     except Exception as e:
-         conn.rollback()
-         logging.exception("Failed to add/toggle feedback")
-         raise
-     finally:
-         conn.close()
-
+        """Add user feedback for an internship with duplicate prevention."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Use INSERT OR REPLACE to handle duplicates
+            cursor.execute('''
+                INSERT OR REPLACE INTO feedback (user_id, internship_id, feedback_type, rating)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, internship_id, feedback_type, rating))
+            
+            # Update internship stats
+            self._update_internship_stats(cursor, internship_id)
+            
+            conn.commit()
+            logging.info(f"Added/updated feedback: {user_id} -> {internship_id} ({feedback_type})")
+            
+        except sqlite3.IntegrityError as e:
+            logging.warning(f"Duplicate feedback ignored: {user_id} -> {internship_id} ({feedback_type})")
+            conn.rollback()
+        finally:
+            conn.close()
     
     def _update_internship_stats(self, cursor, internship_id: str):
         """Update internship popularity statistics."""
@@ -506,7 +485,7 @@ def determine_location_type(location: Optional[str]) -> str:
     return 'remote' if any(keyword in location_str for keyword in remote_keywords) else 'onsite'
 
 # ----------------------------
-# Data Processing (same as before)
+# Data Processing (FIXED: Use correct column names)
 # ----------------------------
 class DataProcessor:
     """Separate class for data processing operations."""
@@ -524,8 +503,8 @@ class DataProcessor:
         title_col = next((col for col in ['internship_title', 'title'] if col in df.columns), None)
         df['processed_title'] = df[title_col].apply(preprocess_text) if title_col else ''
         
-        # Process skills with vectorized operations
-        skills_column = next((col for col in ['required_skills', 'skills', 'Skills'] if col in df.columns), None)
+        # FIXED: Process skills with correct column priority - use 'Skills' first
+        skills_column = next((col for col in ['Skills', 'skills'] if col in df.columns), None)
         if skills_column:
             df['processed_skills'] = df[skills_column].apply(preprocess_text)
             df['skill_list'] = df[skills_column].apply(extract_skills)
@@ -923,8 +902,7 @@ def display_recommendations(recommendations: pd.DataFrame, show_cf_scores: bool 
         location = row.get('display_location', 'N/A')
         stipend = row.get('stipend', 'N/A')
         duration = row.get('duration', 'N/A')
-        skills = (row.get('required_skills') or row.get('skills') or 
-                 row.get('Skills', 'N/A'))
+        skills = (row.get('Skills') or row.get('skills'))
         payment_status = "Paid" if row['is_paid'] else "Unpaid"
         
         print(f"\n{i}. {title}")
@@ -1045,7 +1023,7 @@ def main():
             user_gender=gender,
             user_payment_preference=payment_preference,
             user_id=user_id,
-            top_n=25
+            top_n=50
         )
         
         display_recommendations(recommendations, show_cf_scores=True)

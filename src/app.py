@@ -263,16 +263,14 @@ def add_internship():
         
         # Create new internship record
         new_internship = {
-            'internship_id': f"new_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             'internship_title': data.get('title'),
             'company_name': data.get('company'),
             'location': data.get('location'),
-            'required_skills': data.get('skills'),
+            'Skills': data.get('skills'),
             'duration': data.get('duration'),
             'stipend': data.get('stipend', 'Not specified'),
-            'description': data.get('description', ''),
             'gender': data.get('gender', 'any'),
-            'created_at': datetime.now().isoformat()
+
         }
         
         # Add to dataframe
@@ -289,8 +287,7 @@ def add_internship():
         recommender = OptimizedInternshipRecommender(df)
         
         return jsonify({
-            "message": "Internship added successfully",
-            "internship_id": new_internship['internship_id'],
+            "message": "Internship added successfully",  
             "total_internships": len(df)
         })
         
