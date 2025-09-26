@@ -162,7 +162,7 @@ const FormResultsWrapper = () => {
         setRecommendations(data.recommendations);
         if (data.recommendations.length === 0) {
           // MODIFIED: More specific error message
-          setError('No internships found with at least a 55% match for your skills and location. Please try adjusting your search criteria.');
+          setError('No internships found for your skills and location. Please try adjusting your search criteria.');
         }
       } else {
         throw new Error('Invalid response format');
