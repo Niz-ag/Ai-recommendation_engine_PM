@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { User, MapPin, Briefcase, DollarSign, List, XCircle } from 'lucide-react';
 
-// --- Helper Components (defined outside for stability) ---
+
 
 interface InputFieldProps {
   label: string;
@@ -44,7 +44,7 @@ const FormSection: React.FC<FormSectionProps> = React.memo(({ icon: Icon, title,
   </div>
 ));
 
-// --- Main Recommendation Form Component ---
+
 
 interface UserFormData {
   age: string;
@@ -100,7 +100,6 @@ export const RecommendationForm: React.FC<RecommendationFormProps> = React.memo(
       newErrors.skills = 'Please enter your skills';
     }
 
-    // MODIFIED: Only require location if workMode is 'onsite'
     if (formData.workMode === 'onsite' && !formData.location.trim()) {
       newErrors.location = 'Location is required for onsite work.';
     }

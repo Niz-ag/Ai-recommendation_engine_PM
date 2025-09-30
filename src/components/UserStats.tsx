@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, ThumbsUp, ThumbsDown, Send, TrendingUp, Award } from 'lucide-react';
+import { X, ThumbsUp, Send, TrendingUp, Award } from 'lucide-react';
 
 interface UserStatsProps {
   userId: string;
@@ -176,7 +176,6 @@ export const UserStats: React.FC<UserStatsProps> = ({ userId, onClose }) => {
               </div>
             )}
 
-            {/* Encouragement Message */}
             <div className="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {stats.total_interactions === 0 

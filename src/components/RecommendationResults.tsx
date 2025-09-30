@@ -45,7 +45,7 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
           key={rec.id}
           className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-200 dark:border-gray-700 p-8 transform hover:scale-[1.02] overflow-hidden relative"
         >
-          {/* Gradient Background Accent */}
+
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
           
           {/* Header Section */}
@@ -194,7 +194,6 @@ export const RecommendationResults: React.FC<RecommendationResultsProps> = ({
         </div>
       ))}
       
-      {/* Feedback Reminder */}
       <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl">
         <Brain className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
         <p className="text-gray-600 dark:text-gray-300 font-medium">

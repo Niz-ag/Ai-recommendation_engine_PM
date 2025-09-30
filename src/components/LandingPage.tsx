@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle"; // make sure path is correct
+import { ThemeToggle } from "./ThemeToggle"; 
 
 interface LandingPageProps {
   onGetStarted: () => void;

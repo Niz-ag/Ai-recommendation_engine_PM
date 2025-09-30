@@ -43,7 +43,7 @@ const InputField = React.memo(
   )
 );
 
-// Memoized Form Section
+
 const FormSection = React.memo(
   ({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) => (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -73,7 +73,7 @@ export const AdminPanel: React.FC = React.memo(() => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Memoized change handler
+  
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
@@ -86,7 +86,7 @@ export const AdminPanel: React.FC = React.memo(() => {
     [errors]
   );
 
-  // Validate form
+  
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
@@ -99,7 +99,7 @@ export const AdminPanel: React.FC = React.memo(() => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Memoized submit handler
+  
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -143,7 +143,8 @@ export const AdminPanel: React.FC = React.memo(() => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
+
+
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4">
           <Plus className="w-8 h-8 text-white" />
@@ -154,7 +155,7 @@ export const AdminPanel: React.FC = React.memo(() => {
         </p>
       </div>
 
-      {/* Success/Error Message */}
+
       {message && (
         <div
           className={`p-4 rounded-xl border ${

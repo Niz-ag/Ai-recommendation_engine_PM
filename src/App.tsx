@@ -9,7 +9,6 @@ import { AdminPanel } from './components/AdminPanel';
 import { TrendingInternships } from './components/TrendingInternships';
 import { UserStats } from './components/UserStats';
 
-// This interface is now corrected
 interface UserFormData {
   age: string;
   familyIncome: string;
@@ -161,7 +160,7 @@ const FormResultsWrapper = () => {
       if (data.recommendations && Array.isArray(data.recommendations)) {
         setRecommendations(data.recommendations);
         if (data.recommendations.length === 0) {
-          // MODIFIED: More specific error message
+
           setError('No internships found for your skills and location. Please try adjusting your search criteria.');
         }
       } else {

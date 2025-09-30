@@ -101,7 +101,6 @@ export const TrendingInternships: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mb-4">
           <TrendingUp className="w-8 h-8 text-white" />
@@ -114,7 +113,6 @@ export const TrendingInternships: React.FC = () => {
         </p>
       </div>
 
-      {/* Time Period Selector */}
       <div className="flex justify-center">
         <div className="bg-white dark:bg-gray-800 p-1 rounded-xl shadow-lg">
           {[3, 7, 14, 30].map((days) => (
@@ -133,7 +131,6 @@ export const TrendingInternships: React.FC = () => {
         </div>
       </div>
 
-      {/* Trending List */}
       {trending.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -198,7 +195,7 @@ export const TrendingInternships: React.FC = () => {
                   {internship.description}
                 </p>
 
-                {/* Stats Grid */}
+
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <Users className="w-5 h-5 text-blue-500 mx-auto mb-1" />
@@ -229,7 +226,7 @@ export const TrendingInternships: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Basic Details */}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-sm">
                     <span className="text-gray-500 dark:text-gray-400">

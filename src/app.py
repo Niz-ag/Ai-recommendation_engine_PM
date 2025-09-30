@@ -7,14 +7,14 @@ import traceback
 from datetime import datetime
 import json
 
-# Import the enhanced engine
+# Importing the  engine
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from engine2 import OptimizedInternshipRecommender, Config
 
 app = Flask(__name__)
 CORS(app)
 
-# Global variables
+
 df = None
 recommender = None
 
@@ -44,7 +44,7 @@ def initialize_recommender():
 
 def format_recommendation(row, index):
     """Enhanced formatting with more details."""
-    # Extract basic information
+    # Extracting basic information
     title = row.get('internship_title') or row.get('title', 'Unknown Title')
     company_val = row.get("company_name") or row.get("company", "Unknown Company")
     stipend_val = row.get("stipend", "N/A")
@@ -53,15 +53,15 @@ def format_recommendation(row, index):
     description_val = row.get("description", "Exciting internship opportunity to gain hands-on experience")
     location_val = row.get("location", "Not specified")
     work_mode_val = row.get("work_mode", "Remote")
-    
-    # Determine work mode from location if not explicitly set
+  
+  
     if pd.isna(work_mode_val) or work_mode_val == "Remote":
         if any(keyword in str(location_val).lower() for keyword in ['remote', 'work from home', 'wfh']):
             work_mode_val = "Remote"
         else:
             work_mode_val = "Onsite"
 
-    # Process requirements
+    # Processing requirements
     requirements = []
     if skills_val and not pd.isna(skills_val):
         skill_list = [skill.strip() for skill in str(skills_val).split(",") if skill.strip()]
@@ -70,7 +70,7 @@ def format_recommendation(row, index):
     if not requirements:
         requirements = ["Basic computer skills", "Communication skills", "Enthusiasm to learn"]
 
-    # Process benefits
+    # Processing benefits
     benefits = ["Professional development", "Mentorship program", "Certificate of completion"]
     if row.get("is_paid", True):
         benefits.insert(0, f"Stipend: {stipend_val}")
@@ -109,7 +109,7 @@ def home():
         ]
     })
 
-# --- Replace the /recommend function in app.py with this ---
+
 @app.route("/recommend", methods=["POST"])
 def recommend():
     global recommender
@@ -120,7 +120,7 @@ def recommend():
         data = request.get_json()
         print("Received request:", data)
 
-        # Extract parameters
+        # Extracting parameters
         location = data.get("location", "")
         skills = data.get("skills", "")
         work_mode = data.get("workMode", "remote")
@@ -130,16 +130,15 @@ def recommend():
         
         print(f"Parameters: location={location}, skills={skills}, work_mode={work_mode}, top_n={top_n}")
 
-        # Get recommendations using enhanced engine
-        # MODIFIED: Pass work_mode and enforce min_score
+
         recommendations_df = recommender.recommend_internships(
             user_location=location,
             user_skills=skills,
             user_payment_preference=payment_preference,
             user_id=user_id,
             top_n=top_n,
-            user_work_mode=work_mode, # Pass work_mode for new location logic
-            min_score=0.55 # Enforce 55% minimum match score
+            user_work_mode=work_mode,
+            min_score=0.55 # Enforcing 55% minimum match score for better outputs
         )
 
         recommendations = [
@@ -163,41 +162,40 @@ def recommend():
         traceback.print_exc()
         return jsonify({"error": "Internal server error", "recommendations": []}), 500
 
-@app.route("/feedback", methods=["POST"])
-def add_feedback():
-    """Add user feedback for collaborative filtering."""
-    global recommender
-    if recommender is None:
-        return jsonify({"error": "Recommendation engine not initialized"}), 500
+# @app.route("/feedback", methods=["POST"])
+# def add_feedback():
+#     """Add user feedback for collaborative filtering."""
+#     global recommender
+#     if recommender is None:
+#         return jsonify({"error": "Recommendation engine not initialized"}), 500
 
-    try:
-        data = request.get_json()
-        user_id = data.get("userId")
-        internship_id = data.get("internshipId")
-        feedback_type = data.get("feedbackType")  # 'upvote', 'downvote', 'apply', 'skip'
-        rating = data.get("rating")  # Optional 1-5 rating
-        user_profile = data.get("userProfile")  # Optional user profile data
+#     try:
+#         data = request.get_json()
+#         user_id = data.get("userId")
+#         internship_id = data.get("internshipId")
+#         feedback_type = data.get("feedbackType")  
+#         rating = data.get("rating")  
+#         user_profile = data.get("userProfile") 
 
-        if not all([user_id, internship_id, feedback_type]):
-            return jsonify({"error": "Missing required fields"}), 400
+#         if not all([user_id, internship_id, feedback_type]):
+#             return jsonify({"error": "Missing required fields"}), 400
 
-        # Add feedback to the system
-        recommender.add_user_feedback(
-            user_id=user_id,
-            internship_id=internship_id,
-            feedback_type=feedback_type,
-            user_profile=user_profile,
-            rating=rating
-        )
+#         recommender.add_user_feedback(
+#             user_id=user_id,
+#             internship_id=internship_id,
+#             feedback_type=feedback_type,
+#             user_profile=user_profile,
+#             rating=rating
+#         )
 
-        return jsonify({
-            "message": "Feedback added successfully",
-            "status": "success"
-        })
+#         return jsonify({
+#             "message": "Feedback added successfully",
+#             "status": "success"
+#         })
 
-    except Exception as e:
-        print(f"Error adding feedback: {e}")
-        return jsonify({"error": "Failed to add feedback"}), 500
+#     except Exception as e:
+#         print(f"Error adding feedback: {e}")
+#         return jsonify({"error": "Failed to add feedback"}), 500
 
 @app.route("/user/stats/<user_id>", methods=["GET"])
 def get_user_stats(user_id):
@@ -253,7 +251,6 @@ def add_internship():
     try:
         data = request.get_json()
         
-        # Required fields validation
         required_fields = ['title', 'company', 'skills', 'location', 'duration']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
@@ -262,7 +259,7 @@ def add_internship():
                 "error": f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
         
-        # Create new internship record
+        # For adding a new internship record
         new_internship = {
             'internship_title': data.get('title'),
             'company_name': data.get('company'),
@@ -272,17 +269,17 @@ def add_internship():
             'stipend': data.get('stipend', 'Not specified'),
         }
         
-        # Add to dataframe
+        # Adding to dataframe
         new_df = pd.concat([df, pd.DataFrame([new_internship])], ignore_index=True)
         
-        # Save to CSV
+        # Saving to CSV
         csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "final_internship.csv")
         new_df.to_csv(csv_path, index=False)
         
-        # Update global dataframe
+        # Updating the dataset
         df = new_df
         
-        # Reinitialize recommender with new data
+        # Reinitializing recommender with new dataset
         recommender = OptimizedInternshipRecommender(df)
         
         return jsonify({
