@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-  "bhai": "concurrently \"npm:start-react\" \"npm:start-backend\"",
+  "app": "concurrently \"npm:start-react\" \"npm:start-backend\"",
   "start-react": "npm run dev --prefix .",
   "start-backend": "python src/app.py",
   "dev": "vite --host 0.0.0.0 --port 5173",
